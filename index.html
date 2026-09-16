@@ -130,7 +130,7 @@
                     Environment:
                 </span>
                 <select id="programEnvFilter" class="bg-gray-800 text-sm text-brand-400 border border-gray-700 rounded-md p-2 focus:outline-none focus:border-brand-500 font-semibold transition-colors" onchange="app.programs.onEnvChange()">
-                    <option value="gym">Gym Workout (All)</option>
+                    <option value="gym">Gym Workout (Machine, Barbell, DB)</option>
                     <option value="home">Home Workout (Body, Band, DB)</option>
                 </select>
             </div>
@@ -585,6 +585,13 @@
                     if (!ex.equipment) return true; // Assume bodyweight if missing
                     const eq = ex.equipment.toLowerCase();
                     return homeEquipment.some(hEq => eq.includes(hEq));
+                });
+            } else if (this.environment === 'gym') {
+                const gymEquipment = ['machine', 'dumbbell', 'barbell', 'cable', 'smith']; 
+                dayExercises = dayExercises.filter(ex => {
+                    if (!ex.equipment) return false; // Exclude bodyweight/missing for strictly gym
+                    const eq = ex.equipment.toLowerCase();
+                    return gymEquipment.some(gEq => eq.includes(gEq));
                 });
             }
 
