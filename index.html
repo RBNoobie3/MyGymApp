@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LogPress Exercise Browser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        },
+                        brand: {
+                            500: '#3b82f6', // Blue accent
+                            600: '#2563eb',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for a sleeker look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        
+        /* Prevent body scroll when modal is open */
+        body.modal-open { overflow: hidden; }
+
+        /* Loader animation */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Sticky Header -->
+    <header class="sticky top-0 bg-gray-900 border-b border-gray-800 z-30 shadow-md">
+        <div class="p-4 max-w-4xl mx-auto ">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                  MY GYM APP REPOSITORY
+            </h1> <BR>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Exercise Library
+            </h1>
+            
+            <!-- Search -->
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="Search exercises..." 
+                    class="w-full bg-gray-800 text-white border border-gray-700 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors">
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <!-- Filters -->
+            <div class="grid grid-cols-3 gap-2">
+                <select id="targetFilter" class="bg-gray-800 text-xs sm:text-sm text-gray-200 border border-gray-700 rounded-lg p-2 focus:outline-none focus:border-brand-500">
+                    <option value="">All Muscles</option>
+                </select>
+                <select id="equipmentFilter" class="bg-gray-800 text-xs sm:text-sm text-gray-200 border border-gray-700 rounded-lg p-2 focus:outline-none focus:border-brand-500">
+                    <option value="">All Equipment</option>
+                </select>
+                <select id="categoryFilter" class="bg-gray-800 text-xs sm:text-sm text-gray-200 border border-gray-700 rounded-lg p-2 focus:outline-none focus:border-brand-500">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 max-w-4xl mx-auto w-full relative">
+        
+        <!-- Loading State -->
+        <div id="loadingState" class="absolute inset-0 flex flex-col items-center justify-center pt-20 z-20 bg-gray-950">
+            <div class="spinner mb-4"></div>
+            <p class="text-gray-400 font-medium">Fetching exercises dataset...</p>
+            <p class="text-gray-500 text-sm mt-1">This might take a moment on first load.</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden text-center pt-20">
+            <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-xl font-bold text-white mb-2">Failed to load data</h2>
+            <p class="text-gray-400 mb-4" id="errorMessage">Please check your internet connection.</p>
+            <button onclick="app.init()" class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 rounded-lg font-medium transition-colors">Try Again</button>
+        </div>
+
+        <!-- Exercise Grid -->
+        <div id="exerciseGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Cards injected via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center pt-20">
+            <p class="text-gray-400">No exercises found matching your filters.</p>
+        </div>
+
+        <!-- Load More -->
+        <div class="mt-8 mb-6 text-center">
+            <button id="loadMoreBtn" class="hidden bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 px-8 py-3 rounded-xl font-medium transition-colors w-full sm:w-auto shadow-sm">
+                Load More
+            </button>
+        </div>
+    </main>
+
+    <!-- Detail Modal (Full Screen / Bottom Sheet) -->
+    <div id="exerciseModal" class="fixed inset-0 z-50 hidden opacity-0 transition-opacity duration-300">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="app.closeModal()"></div>
+        
+        <!-- Modal Content Container -->
+        <div class="absolute inset-x-0 bottom-0 top-12 sm:top-20 md:top-auto md:bottom-auto md:inset-0 md:flex md:items-center md:justify-center p-0 md:p-4 transition-transform duration-300 translate-y-full md:translate-y-0" id="modalContentContainer">
+            
+            <div class="bg-gray-900 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-2xl flex flex-col shadow-2xl overflow-hidden border-t md:border border-gray-700">
+                
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900 sticky top-0 z-10">
+                    <h2 id="modalTitle" class="text-lg font-bold text-white capitalize truncate pr-4">Exercise Name</h2>
+                    <button onclick="app.closeModal()" class="text-gray-400 hover:text-white p-2 bg-gray-800 rounded-full transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body (Scrollable) -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-6">
+                    
+                    <!-- Media Area -->
+                    <div class="bg-gray-950 rounded-xl flex items-center justify-center overflow-hidden min-h-[250px] relative border border-gray-800">
+                        <!-- Loading skeleton for image -->
+                        <div id="modalImageLoader" class="absolute inset-0 flex items-center justify-center">
+                            <div class="spinner"></div>
+                        </div>
+                        <img id="modalMedia" src="" alt="Exercise animation" class="w-full h-auto max-h-[400px] object-contain hidden" onload="document.getElementById('modalImageLoader').style.display='none'; this.classList.remove('hidden');" onerror="this.onerror=null; this.src='https://placehold.co/400x300/111827/4b5563?text=Preview+Unavailable'; document.getElementById('modalImageLoader').style.display='none'; this.classList.remove('hidden');">
+                    </div>
+
+                    <!-- Badges -->
+                    <div class="flex flex-wrap gap-2 text-sm font-medium">
+                        <span id="modalTarget" class="bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full border border-brand-500/20 capitalize">Target</span>
+                        <span id="modalEquipment" class="bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 capitalize">Equipment</span>
+                        <span id="modalCategory" class="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 capitalize">Category</span>
+                    </div>
+
+                    <!-- Secondary Muscles (if any) -->
+                    <div id="modalSecondaryContainer" class="hidden">
+                        <h3 class="text-sm text-gray-400 uppercase tracking-wider font-semibold mb-2">Secondary Muscles</h3>
+                        <p id="modalSecondary" class="text-gray-200 capitalize"></p>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div>
+                        <h3 class="text-sm text-gray-400 uppercase tracking-wider font-semibold mb-3">Instructions</h3>
+                        <ol id="modalInstructions" class="list-decimal list-outside ml-4 space-y-3 text-gray-300 text-sm leading-relaxed"></ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            // Configuration
+            DATA_URL: 'https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/data/exercises.json',
+            BASE_REPO_URL: 'https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/',
+            CACHE_KEY: 'logpress_exercises_cache',
+            ITEMS_PER_PAGE: 50,
+            
+            // State
+            allData: [],
+            filteredData: [],
+            currentPage: 1,
+            
+            // DOM Elements
+            els: {
+                loadingState: document.getElementById('loadingState'),
+                errorState: document.getElementById('errorState'),
+                errorMessage: document.getElementById('errorMessage'),
+                grid: document.getElementById('exerciseGrid'),
+                emptyState: document.getElementById('emptyState'),
+                loadMoreBtn: document.getElementById('loadMoreBtn'),
+                searchInput: document.getElementById('searchInput'),
+                targetFilter: document.getElementById('targetFilter'),
+                equipmentFilter: document.getElementById('equipmentFilter'),
+                categoryFilter: document.getElementById('categoryFilter'),
+                
+                // Modal elements
+                modal: document.getElementById('exerciseModal'),
+                modalContainer: document.getElementById('modalContentContainer'),
+                modalTitle: document.getElementById('modalTitle'),
+                modalMedia: document.getElementById('modalMedia'),
+                modalImageLoader: document.getElementById('modalImageLoader'),
+                modalTarget: document.getElementById('modalTarget'),
+                modalEquipment: document.getElementById('modalEquipment'),
+                modalCategory: document.getElementById('modalCategory'),
+                modalSecondaryContainer: document.getElementById('modalSecondaryContainer'),
+                modalSecondary: document.getElementById('modalSecondary'),
+                modalInstructions: document.getElementById('modalInstructions')
+            },
+
+            async init() {
+                this.showLoading();
+                try {
+                    await this.loadData();
+                    this.populateFilters();
+                    this.setupEventListeners();
+                    this.applyFilters(); // Initial render
+                    this.hideLoading();
+                } catch (error) {
+                    console.error("Initialization error:", error);
+                    this.showError(error.message);
+                }
+            },
+
+            async loadData() {
+                // 1. Try to fetch from network
+                if (navigator.onLine) {
+                    try {
+                        const response = await fetch(this.DATA_URL);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const data = await response.json();
+                        this.allData = data;
+                        
+                        // Try to cache it. The dataset might be large. 
+                        // To prevent QuotaExceededError (5MB limit), we map out non-essential languages.
+                        try {
+                            const minifiedData = this.allData.map(ex => {
+                                // Extract only english instructions to save space
+                                let enInstructions = [];
+                                if (Array.isArray(ex.instructions)) {
+                                    enInstructions = ex.instructions;
+                                } else if (ex.instructions && ex.instructions.en) {
+                                    enInstructions = ex.instructions.en;
+                                } else if (typeof ex.instructions === 'string') {
+                                    enInstructions = [ex.instructions];
+                                }
+
+                                return {
+                                    id: ex.id,
+                                    name: ex.name,
+                                    target: ex.target,
+                                    synergists: ex.synergists,
+                                    equipment: ex.equipment,
+                                    category: ex.category,
+                                    instructions: { en: enInstructions },
+                                    image: ex.image,
+                                    video: ex.video,
+                                    gif_url: ex.gif_url
+                                };
+                            });
+                            localStorage.setItem(this.CACHE_KEY, JSON.stringify(minifiedData));
+                        } catch (cacheError) {
+                            console.warn("Could not cache data to localStorage (likely size limit):", cacheError);
+                            // We still have this.allData in memory, so app works.
+                        }
+                        return;
+                    } catch (fetchError) {
+                        console.warn("Network fetch failed, falling back to cache.", fetchError);
+                    }
+                }
+
+                // 2. Fallback to LocalStorage
+                const cachedData = localStorage.getItem(this.CACHE_KEY);
+                if (cachedData) {
+                    this.allData = JSON.parse(cachedData);
+                } else {
+                    throw new Error("No internet connection and no cached data available.");
+                }
+            },
+
+            populateFilters() {
+                const targets = new Set();
+                const equipments = new Set();
+                const categories = new Set();
+
+                this.allData.forEach(ex => {
+                    if (ex.target) targets.add(ex.target.toLowerCase());
+                    if (ex.equipment) equipments.add(ex.equipment.toLowerCase());
+                    if (ex.category) categories.add(ex.category.toLowerCase());
+                });
+
+                const populateSelect = (selectEl, set) => {
+                    Array.from(set).sort().forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item;
+                        option.textContent = item.charAt(0).toUpperCase() + item.slice(1);
+                        selectEl.appendChild(option);
+                    });
+                };
+
+                populateSelect(this.els.targetFilter, targets);
+                populateSelect(this.els.equipmentFilter, equipments);
+                populateSelect(this.els.categoryFilter, categories);
+            },
+
+            setupEventListeners() {
+                // Search and Filters
+                const filters = [this.els.searchInput, this.els.targetFilter, this.els.equipmentFilter, this.els.categoryFilter];
+                filters.forEach(el => {
+                    el.addEventListener('input', () => {
+                        this.currentPage = 1;
+                        this.els.grid.innerHTML = '';
+                        this.applyFilters();
+                    });
+                });
+
+                // Load More
+                this.els.loadMoreBtn.addEventListener('click', () => {
+                    this.currentPage++;
+                    this.renderPage();
+                });
+
+                // Close modal on Escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !this.els.modal.classList.contains('hidden')) {
+                        this.closeModal();
+                    }
+                });
+            },
+
+            applyFilters() {
+                const searchTerm = this.els.searchInput.value.toLowerCase().trim();
+                const target = this.els.targetFilter.value;
+                const equipment = this.els.equipmentFilter.value;
+                const category = this.els.categoryFilter.value;
+
+                this.filteredData = this.allData.filter(ex => {
+                    const matchSearch = ex.name.toLowerCase().includes(searchTerm);
+                    const matchTarget = target ? (ex.target && ex.target.toLowerCase() === target) : true;
+                    const matchEquipment = equipment ? (ex.equipment && ex.equipment.toLowerCase() === equipment) : true;
+                    const matchCategory = category ? (ex.category && ex.category.toLowerCase() === category) : true;
+
+                    return matchSearch && matchTarget && matchEquipment && matchCategory;
+                });
+
+                this.renderPage();
+            },
+
+            renderPage() {
+                const startIndex = (this.currentPage - 1) * this.ITEMS_PER_PAGE;
+                const endIndex = startIndex + this.ITEMS_PER_PAGE;
+                const pageData = this.filteredData.slice(startIndex, endIndex);
+
+                if (this.filteredData.length === 0) {
+                    this.els.emptyState.classList.remove('hidden');
+                    this.els.loadMoreBtn.classList.add('hidden');
+                } else {
+                    this.els.emptyState.classList.add('hidden');
+                    
+                    pageData.forEach(ex => {
+                        this.els.grid.appendChild(this.createCard(ex));
+                    });
+
+                    if (endIndex < this.filteredData.length) {
+                        this.els.loadMoreBtn.classList.remove('hidden');
+                    } else {
+                        this.els.loadMoreBtn.classList.add('hidden');
+                    }
+                }
+            },
+
+            createCard(ex) {
+                const card = document.createElement('div');
+                card.className = "bg-gray-900 border border-gray-800 rounded-xl overflow-hidden cursor-pointer hover:border-gray-600 transition-colors shadow-sm active:scale-[0.98] transform group flex flex-col";
+                card.onclick = () => this.openModal(ex.id);
+
+                // Determine image path safely
+                const imgPath = ex.image || `images/${ex.id}.jpg`;
+                const imgSrc = imgPath.startsWith('http') ? imgPath : `${this.BASE_REPO_URL}${imgPath}`;
+
+                card.innerHTML = `
+                    <div class="h-48 bg-gray-950 relative overflow-hidden flex items-center justify-center p-4">
+                        <img src="${imgSrc}" loading="lazy" alt="${ex.name}" 
+                             class="max-h-full max-w-full object-contain mix-blend-screen group-hover:scale-105 transition-transform duration-300"
+                             onerror="this.onerror=null; this.src='https://placehold.co/300x200/111827/4b5563?text=No+Image';">
+                    </div>
+                    <div class="p-4 flex-1 flex flex-col">
+                        <h3 class="font-bold text-white text-lg capitalize mb-1 truncate">${ex.name}</h3>
+                        <div class="flex items-center gap-2 mt-auto text-xs font-medium">
+                            <span class="text-brand-400 capitalize truncate">${ex.target || 'Unknown'}</span>
+                            <span class="text-gray-600">•</span>
+                            <span class="text-gray-400 capitalize truncate">${ex.equipment || 'Body weight'}</span>
+                        </div>
+                    </div>
+                `;
+                return card;
+            },
+
+            openModal(id) {
+                const ex = this.allData.find(e => e.id === id);
+                if (!ex) return;
+
+                // Set Info
+                this.els.modalTitle.textContent = ex.name;
+                this.els.modalTarget.textContent = ex.target || 'N/A';
+                this.els.modalEquipment.textContent = ex.equipment || 'N/A';
+                this.els.modalCategory.textContent = ex.category || 'N/A';
+
+                // Set Secondary Muscles
+                if (ex.synergists && ex.synergists.length > 0) {
+                    this.els.modalSecondaryContainer.classList.remove('hidden');
+                    this.els.modalSecondary.textContent = Array.isArray(ex.synergists) ? ex.synergists.join(', ') : ex.synergists;
+                } else {
+                    this.els.modalSecondaryContainer.classList.add('hidden');
+                }
+
+                // Parse Instructions
+                let instructionsHTML = '';
+                let instructionsArray = [];
+                
+                if (Array.isArray(ex.instructions)) {
+                    instructionsArray = ex.instructions;
+                } else if (ex.instructions && ex.instructions.en) {
+                    instructionsArray = ex.instructions.en;
+                } else if (typeof ex.instructions === 'string') {
+                    // In case it's a single string separated by newlines or just a paragraph
+                    instructionsArray = ex.instructions.split('\n').filter(s => s.trim().length > 0);
+                }
+
+                if (instructionsArray.length > 0) {
+                    instructionsArray.forEach(step => {
+                        instructionsHTML += `<li class="pl-2">${step}</li>`;
+                    });
+                } else {
+                    instructionsHTML = `<li>No instructions available.</li>`;
+                }
+                this.els.modalInstructions.innerHTML = instructionsHTML;
+
+                // Set Media (GIF/Video fallback)
+                this.els.modalMedia.classList.add('hidden');
+                this.els.modalImageLoader.style.display = 'flex';
+                
+                const vidPath = ex.gif_url || ex.video || `videos/${ex.id}.gif`;
+                const vidSrc = vidPath.startsWith('http') ? vidPath : `${this.BASE_REPO_URL}${vidPath}`;
+                this.els.modalMedia.src = vidSrc;
+
+                // Show Modal with animation
+                this.els.modal.classList.remove('hidden');
+                document.body.classList.add('modal-open');
+                
+                // Trigger reflow for transition
+                void this.els.modal.offsetWidth;
+                
+                this.els.modal.classList.remove('opacity-0');
+                if (window.innerWidth < 768) {
+                    // Bottom sheet slide up on mobile
+                    this.els.modalContainer.classList.remove('translate-y-full');
+                } else {
+                    // Center popup on desktop (fade scale effect)
+                    this.els.modalContainer.style.transform = 'scale(1)';
+                }
+            },
+
+            closeModal() {
+                this.els.modal.classList.add('opacity-0');
+                if (window.innerWidth < 768) {
+                    this.els.modalContainer.classList.add('translate-y-full');
+                }
+                
+                setTimeout(() => {
+                    this.els.modal.classList.add('hidden');
+                    document.body.classList.remove('modal-open');
+                    this.els.modalMedia.src = ''; // Stop gif/video
+                }, 300); // Matches Tailwind duration-300
+            },
+
+            // Utilities
+            showLoading() {
+                this.els.loadingState.classList.remove('hidden');
+                this.els.errorState.classList.add('hidden');
+                this.els.grid.classList.add('hidden');
+            },
+            hideLoading() {
+                this.els.loadingState.classList.add('hidden');
+                this.els.grid.classList.remove('hidden');
+            },
+            showError(msg) {
+                this.els.loadingState.classList.add('hidden');
+                this.els.errorState.classList.remove('hidden');
+                this.els.errorMessage.textContent = msg;
+            }
+        };
+
+        // Boot app
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
